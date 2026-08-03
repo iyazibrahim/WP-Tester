@@ -725,10 +725,22 @@ def run_httpx(url: str, config: dict, scan_dir: Path, cancel_check=None) -> dict
         "-sc",
         "-title",
         "-td",
-        "-ws",
+        "-websocket",
         "-fr",
+        "-no-color",
     ]
     result = _run_tool(cmd, "httpx", "httpx", "passive", scan_dir, output_files=[output_file], acceptable_returncodes={0, 1}, cancel_check=cancel_check)
+    if result["status"] == "failed":
+        # Surface stdout too — ProjectDiscovery may emit flag errors there under -silent.
+        stdout_log = str(result.get("stdout_log", "") or "")
+        if stdout_log and Path(stdout_log).exists():
+            stdout_snip = _safe_read_head(Path(stdout_log), max_bytes=400).strip()
+            if stdout_snip and not str(result.get("note", "")).strip():
+                result["note"] = stdout_snip[:400]
+                result = _annotate_coverage(result)
+            elif stdout_snip and "Exited with code" in str(result.get("note", "")):
+                result["note"] = f"{result['note']} {stdout_snip[:300]}".strip()
+                result = _annotate_coverage(result)
     if result["status"].startswith("completed"):
         ui.ok("httpx complete.")
     return result

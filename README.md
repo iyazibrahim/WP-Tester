@@ -299,9 +299,10 @@ UPDATE_NUCLEI_TEMPLATES=0 docker compose up -d
 
 Docker tooling notes:
 
-- **httpx**: ProjectDiscovery's Go `httpx` must win over the Python `httpx` CLI that `wapiti3` can install into the venv. The image removes `/opt/venv/bin/httpx` and prefers `/usr/local/bin/httpx`.
+- **httpx**: ProjectDiscovery's Go `httpx` must win over the Python `httpx` CLI that `wapiti3` can install into the venv. The image removes `/opt/venv/bin/httpx` and prefers `/usr/local/bin/httpx`. Use `-websocket` (not `-ws`) with httpx v1.7.x.
 - **Nikto**: Requires Perl `XML::Writer` (`libxml-writer-perl`) for `-Format json`.
 - **Nuclei**: Templates are baked at image build (`nuclei -ut`) and refreshed when `UPDATE_NUCLEI_TEMPLATES=1`.
+- **Wapiti**: Pinned to `wapiti3>=3.1.8,<3.2` for Debian/Python 3.11; image build patches any remaining `gettext` `codeset=` usage.
 
 Operational reliability knobs in `config/scan-config.json`:
 

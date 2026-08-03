@@ -28,6 +28,26 @@ Scanner tooling fixes for Nikto, httpx, Nuclei, WPScan, and gau are implemented 
 - `tests/test_tool_status.py`
 - `workflow.md`
 
+## Follow-up fixes (2026-08-03)
+
+| Tool | Issue | Fix |
+|------|--------|-----|
+| httpx | Exit code 2 in ~0.06s with `/usr/local/bin/httpx` | Invalid short flag `-ws` on httpx v1.7.1 — replaced with `-websocket` |
+| Wapiti | Crash at `gettext.translation(... codeset=...)` on Python 3.11 | Pin `wapiti3>=3.1.8,<3.2` (3.2+ needs Py3.12) + Dockerfile patch removing `codeset=` |
+
+### Manual re-check after rebuild
+
+```bash
+docker compose build --no-cache
+docker compose up -d
+
+# httpx flags must include -websocket (not -ws)
+docker compose exec dp-security-platform httpx -u https://example.com -silent -sc -title -td -websocket -fr -json -o /tmp/httpx.json
+
+# Wapiti must import cleanly
+docker compose exec dp-security-platform wapiti --help
+```
+
 ## Manual validation checklist (cloud server)
 
 After pulling these changes on the cloud host:

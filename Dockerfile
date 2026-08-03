@@ -71,7 +71,25 @@ COPY requirements.txt /tmp/requirements.txt
 RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
     /opt/venv/bin/pip install --no-cache-dir sslyze gunicorn arjun && \
     # wapiti3 pulls Python httpx, whose CLI would shadow ProjectDiscovery httpx
-    rm -f /opt/venv/bin/httpx
+    rm -f /opt/venv/bin/httpx && \
+    # Python 3.11 removed gettext codeset=; patch older wapiti builds if still present
+    /opt/venv/bin/python - <<'PY'
+from pathlib import Path
+import re
+import sys
+root = Path(sys.prefix) / "lib"
+patched = 0
+for path in root.rglob("wapitiCore/language/language.py"):
+    text = path.read_text(encoding="utf-8")
+    if "codeset" not in text:
+        continue
+    updated = re.sub(r",\s*codeset\s*=\s*[^,\)]+", "", text)
+    if updated != text:
+        path.write_text(updated, encoding="utf-8")
+        patched += 1
+        print(f"patched {path}")
+print(f"wapiti gettext patches applied: {patched}")
+PY
 
 # Bake Nuclei templates into the image (requires network at build time).
 RUN nuclei -ut || nuclei -update-templates || true

@@ -9,11 +9,45 @@ from lib.tools import (
     _annotate_coverage,
     _nuclei_missing_templates_signal,
     _run_tool,
+    run_httpx,
     run_wpscan,
 )
 
 
 class ToolStatusMappingTest(unittest.TestCase):
+    def test_run_httpx_uses_websocket_flag_not_ws(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            scan_dir = Path(tmp)
+            captured = {}
+
+            def fake_run_tool(cmd, *args, **kwargs):
+                captured["cmd"] = list(cmd)
+                return _annotate_coverage(
+                    {
+                        "name": "httpx",
+                        "label": "httpx",
+                        "phase": "passive",
+                        "command": list(cmd),
+                        "status": "completed",
+                        "returncode": 0,
+                        "duration_seconds": 1.0,
+                        "stdout_log": "",
+                        "stderr_log": "",
+                        "output_files": ["httpx.json"],
+                        "primary_output": "httpx.json",
+                        "note": "",
+                    }
+                )
+
+            with patch("lib.tools._resolve_httpx_binary", return_value="/usr/local/bin/httpx"), patch(
+                "lib.tools._run_tool", side_effect=fake_run_tool
+            ):
+                result = run_httpx("https://example.com", {"httpx_rate_limit": 40}, scan_dir)
+
+            self.assertEqual(result["status"], "completed")
+            self.assertIn("-websocket", captured["cmd"])
+            self.assertNotIn("-ws", captured["cmd"])
+
     def test_wpscan_exit_code_5_is_completed_with_json(self):
         with tempfile.TemporaryDirectory() as tmp:
             scan_dir = Path(tmp)
