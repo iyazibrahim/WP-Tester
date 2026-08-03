@@ -199,6 +199,8 @@ def get_scan_config() -> dict:
         "wpscan_max_threads": 1,
         "whatweb_max_threads": 8,
         "httpx_rate_limit": 25,
+        "gau_providers": "wayback,otx,commoncrawl",
+        "gau_timeout_seconds": 240,
         "nikto_tuning": "123456789",
         "nikto_tuning_wordpress": "123bde",
         "nikto_pause_seconds": 1,

@@ -29,7 +29,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     VIRTUAL_ENV=/opt/venv \
-    PATH="/opt/venv/bin:/usr/local/bin:${PATH}"
+    PATH="/usr/local/bin:/opt/venv/bin:${PATH}"
 
 WORKDIR /app
 
@@ -45,6 +45,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ruby \
     ruby-dev \
     perl \
+    libxml-writer-perl \
+    libnet-ssleay-perl \
+    libio-socket-ssl-perl \
+    libwww-perl \
     default-jre \
     procps \
     sqlmap \
@@ -65,7 +69,12 @@ RUN python3 -m venv /opt/venv && \
 COPY requirements.txt /tmp/requirements.txt
 
 RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
-    /opt/venv/bin/pip install --no-cache-dir sslyze gunicorn arjun
+    /opt/venv/bin/pip install --no-cache-dir sslyze gunicorn arjun && \
+    # wapiti3 pulls Python httpx, whose CLI would shadow ProjectDiscovery httpx
+    rm -f /opt/venv/bin/httpx
+
+# Bake Nuclei templates into the image (requires network at build time).
+RUN nuclei -ut || nuclei -update-templates || true
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential && \
@@ -102,6 +111,9 @@ RUN git clone --depth 1 https://github.com/commixproject/commix.git /opt/tools/c
 RUN git clone --depth 1 https://github.com/sullo/nikto.git /opt/tools/nikto && \
     printf '#!/usr/bin/env bash\nexec perl /opt/tools/nikto/program/nikto.pl "$@"\n' >/usr/local/bin/nikto && \
     chmod +x /usr/local/bin/nikto
+
+# Ensure ProjectDiscovery httpx remains the default after any later pip installs.
+RUN rm -f /opt/venv/bin/httpx
 
 COPY . /app
 

@@ -179,9 +179,29 @@ def install_nikto() -> bool:
     """Install Nikto (Perl-based web scanner)."""
     ui.section("Installing Nikto")
 
+    nikto_perl_deps = [
+        "libxml-writer-perl",
+        "libnet-ssleay-perl",
+        "libio-socket-ssl-perl",
+        "libwww-perl",
+    ]
+
     if _is_linux():
+        # JSON/HTTPS Nikto formats need these Perl modules even with apt nikto.
+        _apt_install(nikto_perl_deps)
         if _apt_install("nikto"):
             ui.ok("Nikto installed via apt.")
+            return True
+
+        if _git_available():
+            install_dir = Path.home() / "tools" / "nikto"
+            if not install_dir.exists():
+                ui.status("Cloning Nikto from GitHub...")
+                ok = _run(["git", "clone", "https://github.com/sullo/nikto.git", str(install_dir)])
+                if not ok:
+                    return False
+            ui.ok(f"Nikto available at {install_dir}")
+            ui.info(f"Run: perl {install_dir / 'program' / 'nikto.pl'} -h <target>")
             return True
 
     elif _is_windows():
@@ -194,6 +214,7 @@ def install_nikto() -> bool:
                     ui.ok(f"Nikto cloned to {install_dir}")
                     ui.info(f"Add {install_dir / 'program'} to your PATH,")
                     ui.info("or run directly: perl nikto.pl -h <target>")
+                    ui.warn("Ensure Strawberry Perl includes XML::Writer (cpan XML::Writer) for JSON output.")
                     return True
             else:
                 ui.ok(f"Nikto already exists at {install_dir}")

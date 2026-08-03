@@ -292,9 +292,16 @@ docker compose run --rm dp-security-platform scanner --target https://example.co
 Optional startup behavior:
 
 ```bash
-# Update nuclei templates during startup
-UPDATE_NUCLEI_TEMPLATES=1 docker compose up -d
+# Nuclei templates refresh on startup (default in docker-compose.yml)
+# Set to 0 only if you want to skip the update for faster restarts
+UPDATE_NUCLEI_TEMPLATES=0 docker compose up -d
 ```
+
+Docker tooling notes:
+
+- **httpx**: ProjectDiscovery's Go `httpx` must win over the Python `httpx` CLI that `wapiti3` can install into the venv. The image removes `/opt/venv/bin/httpx` and prefers `/usr/local/bin/httpx`.
+- **Nikto**: Requires Perl `XML::Writer` (`libxml-writer-perl`) for `-Format json`.
+- **Nuclei**: Templates are baked at image build (`nuclei -ut`) and refreshed when `UPDATE_NUCLEI_TEMPLATES=1`.
 
 Operational reliability knobs in `config/scan-config.json`:
 

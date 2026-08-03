@@ -8,7 +8,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      UPDATE_NUCLEI_TEMPLATES: "0"
+      UPDATE_NUCLEI_TEMPLATES: "1"
       PYTHONUNBUFFERED: "1"
       # Set a strong secret key in production — if unset, a random key is
       # generated per-process which invalidates sessions on restart.

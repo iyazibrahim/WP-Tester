@@ -147,6 +147,79 @@ def _path_has_content(path: Path) -> bool:
         return False
 
 
+def _is_projectdiscovery_httpx(binary: str) -> bool:
+    """Return True when binary looks like ProjectDiscovery httpx (not Python httpx CLI)."""
+    try:
+        help_proc = subprocess.run(
+            [binary, "-h"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        help_text = f"{help_proc.stdout or ''}{help_proc.stderr or ''}".lower()
+        if "tech-detect" in help_text or "-td" in help_text:
+            return True
+        if "projectdiscovery" in help_text:
+            return True
+        # Python encode/httpx CLI exposes HTTP methods, not probe flags.
+        if "httpx [options] url" in help_text or "encode" in help_text:
+            return False
+        version_proc = subprocess.run(
+            [binary, "-version"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        version_text = f"{version_proc.stdout or ''}{version_proc.stderr or ''}".lower()
+        return "projectdiscovery" in version_text or "current version" in version_text
+    except Exception:
+        return False
+
+
+def _resolve_httpx_binary() -> str | None:
+    """Prefer ProjectDiscovery httpx over a Python httpx CLI shadowed on PATH."""
+    candidates: list[str] = []
+    preferred = Path("/usr/local/bin/httpx")
+    if preferred.is_file() and os.access(preferred, os.X_OK):
+        candidates.append(str(preferred))
+    which = shutil.which("httpx")
+    if which and which not in candidates:
+        candidates.append(which)
+
+    for candidate in candidates:
+        if _is_projectdiscovery_httpx(candidate):
+            return candidate
+    return None
+
+
+def _nuclei_missing_templates_signal(result: dict) -> bool:
+    """Detect stderr/note patterns that indicate Nuclei has no usable templates."""
+    chunks: list[str] = [str(result.get("note", "") or "")]
+    for key in ("stderr_log", "stdout_log"):
+        log_path = str(result.get(key, "") or "").strip()
+        if log_path and Path(log_path).exists():
+            chunks.append(_safe_read_head(Path(log_path), max_bytes=8000))
+    combined = " ".join(chunks).lower()
+    markers = (
+        "no templates found",
+        "could not find template",
+        "no template",
+        "0 templates",
+        "templates not found",
+        "failed to get templates",
+        "template does not exist",
+    )
+    if any(m in combined for m in markers):
+        return True
+    if "nuclei-templates" in combined and any(
+        token in combined for token in ("error", "failed", "missing", "not found", "unable")
+    ):
+        return True
+    return False
+
+
 def _result_template(
     tool_name: str,
     tool_label: str,
@@ -371,6 +444,8 @@ def _run_tool(
             note = stderr.strip()[:400] if stderr else "Completed with partial evidence; review captured output."
         elif returncode not in ok_codes and stderr:
             note = stderr.strip()[:400]
+        elif returncode not in ok_codes:
+            note = f"Exited with code {returncode} (no stderr)."
 
         result.update(
             {
@@ -625,9 +700,20 @@ def detect_profile_from_artifacts(scan_dir: Path, url: str, requested_profile: s
 def run_httpx(url: str, config: dict, scan_dir: Path, cancel_check=None) -> dict:
     ui.status("Running httpx probe...")
     output_file = scan_dir / "httpx.json"
+    httpx_bin = _resolve_httpx_binary()
+    if not httpx_bin:
+        result = _result_template(
+            "httpx",
+            "httpx",
+            "passive",
+            ["httpx"],
+            "failed",
+            "ProjectDiscovery httpx not found (Python httpx CLI may be shadowing PATH). Install Go httpx or remove /opt/venv/bin/httpx.",
+        )
+        return _annotate_coverage(result)
     rate = str(config.get("httpx_rate_limit", 25))
     cmd = [
-        "httpx",
+        httpx_bin,
         "-u",
         url,
         "-json",
@@ -790,13 +876,20 @@ def run_nuclei(url: str, config: dict, scan_dir: Path, profile: str, scan_mode: 
             fallback_notes.append("Tagged, auto-scan, and broad full-template Nuclei passes all returned no matches.")
 
     if result.get("status") == "completed_no_output":
-        fallback_notes.append(
-            "Nuclei executed successfully but reported no findings. This can be normal for low-exposure targets; update templates and widen scope if needed."
-        )
+        if _nuclei_missing_templates_signal(result):
+            fallback_notes.append(
+                "Nuclei templates appear missing or unusable. Update templates with `nuclei -ut` "
+                "or set UPDATE_NUCLEI_TEMPLATES=1 and rebuild/restart the container."
+            )
+        else:
+            fallback_notes.append(
+                "Nuclei executed successfully but reported no findings. This can be normal for low-exposure targets; update templates and widen scope if needed."
+            )
 
     if fallback_notes:
         existing = str(result.get("note", "") or "").strip()
         result["note"] = " ".join([part for part in [existing, *fallback_notes] if part]).strip()
+        result = _annotate_coverage(result)
 
     if result["status"].startswith("completed"):
         ui.ok("Nuclei complete.")
@@ -863,12 +956,15 @@ def run_corsy(url: str, scan_dir: Path, cancel_check=None) -> dict:
 def run_gau(hostname: str, scan_dir: Path, config: dict, cancel_check=None) -> dict:
     ui.status("Running gau...")
     output_file = scan_dir / "gau.txt"
-    # gau does not support --threads; use --retries and limit providers to keep it fast
-    cmd = ["gau", hostname, "--retries", "2", "--providers", "wayback,otx"]
-    timeout = int(config.get("gau_timeout_seconds", 180))
+    providers = str(config.get("gau_providers", "wayback,otx,commoncrawl") or "wayback,otx,commoncrawl").strip()
+    cmd = ["gau", hostname, "--retries", "2", "--providers", providers]
+    timeout = int(config.get("gau_timeout_seconds", 240))
     result = _run_tool(cmd, "gau", "gau", "passive", scan_dir, output_files=[output_file], stdout_file=output_file, timeout=timeout, cancel_check=cancel_check)
-    if result.get("status") == "completed_no_output" and not result.get("note"):
-        result["note"] = "gau finished successfully but did not return any archived URLs from the selected providers."
+    if result.get("status") == "completed_no_output":
+        result["note"] = (
+            f"gau finished successfully but did not return any archived URLs from providers: {providers}."
+        )
+        result = _annotate_coverage(result)
     if result["status"].startswith("completed"):
         ui.ok("gau complete.")
     return result
@@ -898,7 +994,18 @@ def run_wpscan(url: str, config: dict, tokens: dict, scan_dir: Path, is_local_ta
     token = tokens.get("wpscan_api_token", "")
     if token:
         cmd.extend(["--api-token", token])
-    result = _run_tool(cmd, "wpscan", "WPScan", "passive", scan_dir, output_files=[output_file], timeout=900, cancel_check=cancel_check)
+    result = _run_tool(
+        cmd,
+        "wpscan",
+        "WPScan",
+        "passive",
+        scan_dir,
+        output_files=[output_file],
+        timeout=900,
+        # 0 = OK (no vulns), 5 = VULNERABLE (findings present) — both are successful scans
+        acceptable_returncodes={0, 5},
+        cancel_check=cancel_check,
+    )
     if result["status"].startswith("completed"):
         ui.ok("WPScan complete.")
     return result
