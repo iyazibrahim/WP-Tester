@@ -77,3 +77,28 @@ Then re-run the WordPress scan profile against your target and confirm:
 - [ ] Deploy/rebuild on cloud server
 - [ ] Run manual checklist above
 - [ ] Record any remaining tool anomalies in this file
+
+## Completed: A4 report layout fix (2026-08-07)
+
+### Problem
+HTML security assessment reports used a wide web layout (`max-width: 1240px` / `1320px`), so on-screen viewing looked oversized and triggered horizontal scrolling. A4 rules existed only under `@media print`.
+
+### Fix
+- On-screen report is now an A4-width page preview (`210mm`, centered, shrinks on narrow viewports)
+- Removed non-wrapping brand tagline; grids use `minmax(0, …)` so columns can shrink
+- Wide tables wrapped in `.table-scroll` so overflow stays inside the page, not the whole window
+- Print styles remain `@page { size: A4 }` and strip page chrome for clean PDF/print output
+- Applied to `templates/report-template.html` and the dark fallback CSS in `lib/reports.py`
+
+### Files touched
+- `templates/report-template.html`
+- `lib/reports.py`
+- `workflow.md`
+
+### Validation
+- Template asserts: `210mm`, `table-scroll`, `size: A4`, no `1240px`
+- `from lib.reports import generate_html_report` OK
+- `pytest tests/` → 10 passed
+
+### Note
+Existing saved report HTML files are static; re-run a scan (or regenerate from JSON) to pick up the new layout.

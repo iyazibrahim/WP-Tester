@@ -1222,19 +1222,20 @@ def generate_html_report(payload: dict) -> str:
             --violet: #8b5cf6;
         }}
         * {{ box-sizing: border-box; }}
-        body {{ margin: 0; font-family: Segoe UI, Arial, sans-serif; background: radial-gradient(circle at top left, rgba(70,183,255,0.12), transparent 35%), linear-gradient(180deg, #07101d, #101826 28%); color: var(--text); }}
-        .wrap {{ max-width: 1320px; margin: 0 auto; padding: 28px; }}
-        .hero {{ background: linear-gradient(135deg, rgba(16,24,38,0.95), rgba(23,37,84,0.92)); border: 1px solid var(--border); border-radius: 22px; padding: 28px; box-shadow: 0 18px 60px rgba(2, 6, 23, 0.35); }}
-        .hero h1 {{ margin: 0 0 8px; font-size: 32px; }}
+        html {{ overflow-x: hidden; }}
+        body {{ margin: 0; font-family: Segoe UI, Arial, sans-serif; background: radial-gradient(circle at top left, rgba(70,183,255,0.12), transparent 35%), linear-gradient(180deg, #07101d, #101826 28%); color: var(--text); overflow-x: hidden; }}
+        .wrap {{ width: min(210mm, 100%); max-width: 210mm; margin: 24px auto; padding: 14mm 12mm; background: rgba(16,24,38,0.96); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 18px 60px rgba(2, 6, 23, 0.35); min-width: 0; overflow-x: hidden; }}
+        .hero {{ background: linear-gradient(135deg, rgba(16,24,38,0.95), rgba(23,37,84,0.92)); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: none; min-width: 0; overflow: hidden; }}
+        .hero h1 {{ margin: 0 0 8px; font-size: 26px; overflow-wrap: anywhere; }}
         .hero p {{ margin: 0; color: var(--muted); }}
-        .grid {{ display: grid; gap: 16px; }}
-        .meta-grid {{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 20px; }}
-        .metrics {{ grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 24px 0; }}
-        .two {{ grid-template-columns: 1.15fr 1fr; }}
-        .three {{ grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }}
-        .card, .metric-card {{ background: rgba(16,24,38,0.94); border: 1px solid var(--border); border-radius: 18px; padding: 18px; overflow: hidden; }}
+        .grid {{ display: grid; gap: 14px; min-width: 0; }}
+        .meta-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }}
+        .metrics {{ grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 18px 0; }}
+        .two {{ grid-template-columns: minmax(0, 1fr); }}
+        .three {{ grid-template-columns: minmax(0, 1fr); }}
+        .card, .metric-card {{ background: rgba(16,24,38,0.94); border: 1px solid var(--border); border-radius: 14px; padding: 14px; overflow: hidden; min-width: 0; max-width: 100%; }}
         .metric-card .label {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
-        .metric-card .value {{ font-size: 34px; font-weight: 800; margin-top: 8px; }}
+        .metric-card .value {{ font-size: 28px; font-weight: 800; margin-top: 8px; }}
         .metric-card.critical .value {{ color: var(--critical); }}
         .metric-card.high .value {{ color: var(--high); }}
         .metric-card.medium .value {{ color: var(--medium); }}
@@ -1242,12 +1243,13 @@ def generate_html_report(payload: dict) -> str:
         .metric-card.info .value {{ color: var(--info); }}
         .metric-card.good .value {{ color: var(--good); }}
         .metric-card.total .value {{ color: var(--accent); }}
-        h2 {{ margin: 30px 0 12px; font-size: 22px; }}
+        h2 {{ margin: 24px 0 10px; font-size: 18px; }}
         h3 {{ margin-top: 0; }}
-        table {{ width: 100%; border-collapse: collapse; table-layout: fixed; }}
-        th, td {{ text-align: left; padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }}
-        th {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
-        .sev, .pill {{ display: inline-block; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; }}
+        .table-scroll {{ width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }}
+        table {{ width: 100%; max-width: 100%; border-collapse: collapse; table-layout: fixed; }}
+        th, td {{ text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }}
+        th {{ color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }}
+        .sev, .pill {{ display: inline-block; border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; }}
         .sev.critical {{ background: rgba(239,68,68,0.14); color: var(--critical); }}
         .sev.high {{ background: rgba(249,115,22,0.14); color: var(--high); }}
         .sev.medium {{ background: rgba(245,158,11,0.14); color: var(--medium); }}
@@ -1264,58 +1266,68 @@ def generate_html_report(payload: dict) -> str:
         .finding.medium {{ border-left-color: var(--medium); }}
         .finding.low {{ border-left-color: var(--low); }}
         .finding.info {{ border-left-color: var(--info); }}
-        .finding-head, .note-head {{ display: flex; align-items: center; justify-content: space-between; gap: 12px; }}
+        .finding-head, .note-head {{ display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-width: 0; }}
         .meta, .note-meta {{ color: var(--muted); font-size: 13px; }}
         pre, code {{ background: #09111f; border: 1px solid var(--border); color: #dbeafe; border-radius: 10px; }}
-        pre {{ padding: 12px; white-space: pre-wrap; overflow-x: auto; }}
-        code {{ padding: 2px 6px; }}
+        pre {{ padding: 12px; white-space: pre-wrap; overflow-x: auto; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }}
+        code {{ padding: 2px 6px; word-break: break-all; }}
         ul, ol {{ padding-left: 20px; }}
         a {{ color: #7dd3fc; }}
-        .narrative {{ white-space: pre-wrap; line-height: 1.6; }}
-        .note-card {{ background: rgba(22,33,51,0.75); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }}
+        .narrative {{ white-space: pre-wrap; line-height: 1.6; overflow-wrap: anywhere; }}
+        .note-card {{ background: rgba(22,33,51,0.75); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; min-width: 0; overflow: hidden; }}
         .toc {{ position: sticky; top: 12px; z-index: 10; background: rgba(16,24,38,0.92); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: 0 0 14px; backdrop-filter: blur(3px); }}
         .toc a {{ color: var(--muted); text-decoration: none; font-size: 12px; margin-right: 12px; }}
         .toc a:hover {{ color: var(--text); }}
-        .risk-banner {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 14px; }}
-        .risk-chip {{ border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; background: rgba(8,16,29,0.65); }}
+        .risk-banner {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }}
+        .risk-chip {{ border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; background: rgba(8,16,29,0.65); min-width: 0; }}
         .risk-chip .k {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
-        .risk-chip .v {{ font-size: 20px; font-weight: 700; margin-top: 4px; }}
-        .actions-grid {{ grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }}
+        .risk-chip .v {{ font-size: 18px; font-weight: 700; margin-top: 4px; overflow-wrap: anywhere; }}
+        .actions-grid {{ grid-template-columns: minmax(0, 1fr); }}
         .legend {{ color: var(--muted); font-size: 13px; margin-top: 8px; }}
         .appendix-note {{ color: var(--muted); font-size: 13px; margin-bottom: 10px; }}
-        @media (max-width: 980px) {{ .two {{ grid-template-columns: 1fr; }} }}
+        @media (min-width: 721px) {{
+            .metrics {{ grid-template-columns: repeat(4, minmax(0, 1fr)); }}
+            .two {{ grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }}
+            .three {{ grid-template-columns: repeat(3, minmax(0, 1fr)); }}
+            .risk-banner {{ grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }}
+            .actions-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+        }}
+        @media (max-width: 720px) {{
+            .wrap {{ margin: 0; border-radius: 0; border-left: none; border-right: none; padding: 16px 12px; }}
+            .meta-grid, .metrics, .risk-banner, .two, .three {{ grid-template-columns: 1fr; }}
+        }}
         @media print {{
             @page {{ size: A4; margin: 11mm; }}
-            html, body {{ width: 210mm; }}
+            html, body {{ width: 210mm; overflow: visible; }}
             body {{ background: #fff; color: #111827; font-size: 10pt; }}
-            .wrap {{ max-width: none; width: auto; margin: 0; padding: 0; }}
+            .wrap {{ width: auto; max-width: none; margin: 0; padding: 0; border: none; border-radius: 0; box-shadow: none; background: #fff; overflow: visible; }}
             .grid {{ gap: 10px; }}
             .card, .metric-card, .hero, .risk-chip, details.finding {{ box-shadow: none; break-inside: avoid-page; page-break-inside: avoid; }}
             .card, .metric-card {{ padding: 12px; border-radius: 10px; }}
             .hero {{ padding: 18px; border-radius: 12px; }}
-            h1 {{ font-size: 22pt; }}
+            h1 {{ font-size: 18pt; }}
             h2, h3 {{ break-after: avoid-page; page-break-after: avoid; }}
-            th, td, p, li, .meta, .appendix-note, .legend {{ font-size: 8.8pt; line-height: 1.4; }}
-            th, td {{ padding: 6px 8px; }}
+            th, td, p, li, .meta, .appendix-note, .legend {{ font-size: 8.5pt; line-height: 1.35; }}
+            th, td {{ padding: 5px 6px; }}
             thead {{ display: table-header-group; }}
             tr {{ break-inside: avoid-page; page-break-inside: avoid; }}
-            pre, code {{ white-space: pre-wrap; word-break: break-word; overflow: visible; font-size: 8pt; }}
+            pre, code {{ white-space: pre-wrap; word-break: break-word; overflow: visible; font-size: 7.5pt; }}
+            .table-scroll {{ overflow: visible; }}
             .toc, .findings-toolbar, .findings-pages {{ display: none !important; }}
             details.finding > summary .sum-chevron {{ display: none; }}
         }}
         /* ── Text overflow fixes ─────────────────────────────────────────── */
-        td, th {{ word-break: break-word; overflow-wrap: anywhere; max-width: 480px; }}
+        td, th {{ word-break: break-word; overflow-wrap: anywhere; }}
         td code {{ word-break: break-all; white-space: pre-wrap; }}
-        pre {{ white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; overflow-x: auto; max-width: 100%; }}
         .url-cell {{ word-break: break-all; font-size: 0.82em; }}
         ul {{ padding-left: 18px; margin: 0; }}
-        li {{ word-break: break-all; overflow-wrap: anywhere; font-size: 0.82em; color: var(--muted); margin-bottom: 4px; }}
+        li {{ word-break: break-word; overflow-wrap: anywhere; font-size: 0.82em; color: var(--muted); margin-bottom: 4px; }}
         .disc-card {{ overflow: hidden; min-width: 0; }}
         .disc-card ul {{ max-height: 280px; overflow-y: auto; }}
         /* ── Findings search / filter / pagination ───────────────────────── */
         .findings-toolbar {{ display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }}
-        .findings-toolbar input {{ flex: 1; min-width: 200px; padding: 8px 12px; background: #0d1929; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; }}
-        .findings-toolbar select {{ padding: 8px 10px; background: #0d1929; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; }}
+        .findings-toolbar input {{ flex: 1; min-width: 0; padding: 8px 12px; background: #0d1929; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; }}
+        .findings-toolbar select {{ padding: 8px 10px; background: #0d1929; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; max-width: 100%; }}
         .findings-toolbar .findings-count {{ color: var(--muted); font-size: 13px; white-space: nowrap; }}
         .findings-pages {{ display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; align-items: center; }}
         .findings-pages button {{ padding: 5px 11px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 6px; color: var(--text); cursor: pointer; font-size: 13px; }}

@@ -24,83 +24,109 @@
             --shadow: 0 20px 48px rgba(20, 38, 63, 0.08);
         }
         * { box-sizing: border-box; }
+        html {
+            overflow-x: hidden;
+        }
         body {
             margin: 0;
             font-family: "Segoe UI", Arial, sans-serif;
             background: linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
             color: var(--text);
+            overflow-x: hidden;
         }
+        /* On-screen A4 page preview (~210mm). Shrinks on narrow viewports. */
         .wrap {
-            max-width: 1240px;
-            margin: 0 auto;
-            padding: 28px;
+            width: min(210mm, 100%);
+            max-width: 210mm;
+            margin: 24px auto;
+            padding: 14mm 12mm;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: var(--shadow);
+            min-width: 0;
+            overflow-x: hidden;
         }
         .report-shell {
             display: grid;
-            gap: 18px;
+            gap: 14px;
+            min-width: 0;
+            width: 100%;
         }
         .card {
-            background: var(--surface);
+            background: var(--surface-soft);
             border: 1px solid var(--border);
-            border-radius: 18px;
-            padding: 22px;
-            box-shadow: var(--shadow);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: none;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
         }
         .brand-header {
             display: grid;
-            gap: 18px;
+            gap: 14px;
         }
         .brand-bar {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
-            gap: 24px;
-            padding-bottom: 16px;
-            border-bottom: 4px solid var(--navy);
+            gap: 16px;
+            flex-wrap: wrap;
+            padding-bottom: 12px;
+            border-bottom: 3px solid var(--navy);
+            min-width: 0;
         }
         .brand-logo {
             display: flex;
             align-items: center;
-            min-height: 52px;
+            min-height: 44px;
+            min-width: 0;
+            max-width: 100%;
         }
         .brand-logo svg {
-            width: 210px;
+            width: min(180px, 100%);
             height: auto;
             display: block;
         }
         .brand-tagline {
             color: var(--navy);
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             font-weight: 600;
-            white-space: nowrap;
+            white-space: normal;
+            text-align: right;
+            max-width: 100%;
+            overflow-wrap: anywhere;
         }
         .title-block h1 {
             margin: 0;
-            font-size: 2.35rem;
-            line-height: 1.05;
+            font-size: 1.85rem;
+            line-height: 1.15;
             color: var(--navy);
             font-family: Cambria, Georgia, serif;
+            overflow-wrap: anywhere;
         }
         .title-block p {
             margin: 8px 0 0;
             color: var(--muted);
-            font-size: 0.98rem;
+            font-size: 0.92rem;
         }
         .meta-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
         }
         .meta-item {
             display: grid;
             gap: 4px;
-            padding: 12px 14px;
+            padding: 10px 12px;
             border: 1px solid var(--border);
-            border-radius: 14px;
-            background: var(--surface-soft);
+            border-radius: 10px;
+            background: var(--surface);
+            min-width: 0;
         }
         .meta-label {
-            font-size: 0.76rem;
+            font-size: 0.72rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             color: var(--muted);
@@ -108,13 +134,16 @@
         }
         .meta-value {
             color: var(--text);
-            font-size: 0.98rem;
+            font-size: 0.9rem;
             line-height: 1.35;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
         .summary-grid {
             display: grid;
-            grid-template-columns: minmax(260px, 320px) 1fr;
-            gap: 16px;
+            grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+            gap: 12px;
+            min-width: 0;
         }
         .section-heading {
             display: flex;
@@ -127,38 +156,40 @@
         }
         .risk-card {
             display: grid;
-            gap: 16px;
-            padding: 20px;
+            gap: 12px;
+            padding: 14px;
             border: 1px solid var(--border);
-            border-radius: 16px;
-            background: var(--surface-soft);
+            border-radius: 12px;
+            background: var(--surface);
+            min-width: 0;
         }
         .risk-card .risk-label {
             color: var(--muted);
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             font-weight: 700;
         }
         .risk-card .risk-value {
-            font-size: 2.4rem;
+            font-size: 2rem;
             line-height: 1;
             font-weight: 900;
             color: var(--critical);
         }
         .risk-card .risk-note {
             color: var(--muted);
-            font-size: 0.94rem;
-            line-height: 1.55;
+            font-size: 0.86rem;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
         }
         .risk-scale {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 4px;
         }
         .risk-scale span {
             display: block;
-            height: 10px;
+            height: 8px;
             border-radius: 999px;
         }
         .risk-scale span:nth-child(1) { background: #23a26d; }
@@ -167,41 +198,45 @@
         .risk-scale span:nth-child(4) { background: #d92d20; }
         .summary-text {
             display: grid;
-            gap: 12px;
-            padding: 20px;
+            gap: 10px;
+            padding: 14px;
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 12px;
             background: var(--surface);
+            min-width: 0;
         }
         .summary-prose {
             margin: 0;
             color: var(--text);
-            font-size: 1rem;
-            line-height: 1.72;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
         }
         .metrics {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            min-width: 0;
         }
         .metric-card {
             display: grid;
-            gap: 10px;
-            padding: 18px;
+            gap: 8px;
+            padding: 14px;
             border: 1px solid var(--border);
-            border-radius: 16px;
-            background: var(--surface);
+            border-radius: 12px;
+            background: var(--surface-soft);
+            min-width: 0;
         }
         .metric-card .label {
             color: var(--muted);
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             font-weight: 700;
         }
         .metric-card .value {
             color: var(--navy);
-            font-size: 2rem;
+            font-size: 1.65rem;
             line-height: 1;
             font-weight: 900;
         }
@@ -209,18 +244,26 @@
         .metric-card.high .value { color: var(--high); }
         .metric-card.good .value { color: var(--good); }
         .metric-card.info .value { color: var(--teal); }
+        .table-scroll {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
         table {
             width: 100%;
+            max-width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
         }
         th, td {
             text-align: left;
-            padding: 12px 14px;
+            padding: 8px 10px;
             border-bottom: 1px solid var(--border);
             vertical-align: top;
             word-break: break-word;
             overflow-wrap: anywhere;
+            font-size: 0.86rem;
         }
         th {
             color: var(--muted);
@@ -249,25 +292,28 @@
         .pill.muted { background: rgba(100,116,139,0.12); color: var(--info); }
         .coverage-grid {
             display: grid;
-            grid-template-columns: minmax(260px, 1fr) 1fr;
-            gap: 16px;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 12px;
+            min-width: 0;
         }
         .coverage-note {
             color: var(--muted);
-            font-size: 0.96rem;
-            line-height: 1.65;
+            font-size: 0.9rem;
+            line-height: 1.55;
             margin: 0;
+            overflow-wrap: anywhere;
         }
         .appendix-links {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 10px;
         }
         .appendix-link {
             border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 16px;
-            background: var(--surface-soft);
+            border-radius: 12px;
+            padding: 14px;
+            background: var(--surface);
+            min-width: 0;
         }
         .appendix-link strong {
             display: block;
@@ -307,29 +353,34 @@
         details.finding > summary {
             list-style: none;
             cursor: pointer;
-            padding: 14px 18px;
-            border-radius: 12px;
-            background: var(--surface-soft);
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: var(--surface);
             border: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
+            min-width: 0;
+            flex-wrap: wrap;
         }
         details.finding > summary::-webkit-details-marker { display: none; }
-        details.finding > summary .sum-chevron { margin-left: auto; transition: transform 0.2s; }
+        details.finding > summary .sum-chevron { margin-left: auto; transition: transform 0.2s; flex-shrink: 0; }
         details.finding[open] > summary .sum-chevron { transform: rotate(180deg); }
         .finding-body {
-            padding: 14px 18px;
+            padding: 12px 14px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-top: none;
-            border-bottom-left-radius: 12px;
-            border-bottom-right-radius: 12px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            min-width: 0;
+            overflow: hidden;
         }
         .finding-details-grid {
             display: grid;
             gap: 10px;
             margin: 14px 0;
+            min-width: 0;
         }
         .finding-details-panel {
             margin: 14px 0;
@@ -337,6 +388,7 @@
             border-radius: 12px;
             background: var(--surface-soft);
             overflow: hidden;
+            min-width: 0;
         }
         .finding-details-panel > summary {
             list-style: none;
@@ -393,25 +445,45 @@
         }
         .sum-title {
             font-weight: 600;
-            font-size: 0.93rem;
+            font-size: 0.9rem;
             flex: 1;
+            min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        @media (max-width: 980px) {
+        /* Stack denser layouts for narrow phones / when A4 page is constrained */
+        @media (max-width: 720px) {
+            .wrap {
+                margin: 0;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                padding: 16px 12px;
+            }
             .summary-grid,
-            .coverage-grid,
+            .meta-grid,
             .metrics,
             .appendix-links {
                 grid-template-columns: 1fr;
             }
             .brand-bar {
-                grid-template-columns: 1fr;
-                align-items: start;
+                flex-direction: column;
+                align-items: flex-start;
             }
             .brand-tagline {
-                white-space: normal;
+                text-align: left;
+            }
+        }
+        @media (min-width: 721px) {
+            .metrics {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+            .appendix-links {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            .coverage-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
         @media print {
@@ -421,6 +493,7 @@
             }
             html, body {
                 width: 210mm;
+                overflow: visible;
             }
             body {
                 background: #fff;
@@ -428,10 +501,15 @@
                 font-size: 10pt;
             }
             .wrap {
-                max-width: none;
                 width: auto;
-                padding: 0;
+                max-width: none;
                 margin: 0;
+                padding: 0;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+                background: #fff;
+                overflow: visible;
             }
             .report-shell {
                 gap: 10px;
@@ -449,14 +527,15 @@
             }
             .card,
             .metric-card {
-                border-radius: 10px;
-                padding: 12px;
+                border-radius: 8px;
+                padding: 10px;
+                background: #fff;
             }
             .brand-bar {
-                padding-bottom: 10px;
+                padding-bottom: 8px;
             }
             .title-block h1 {
-                font-size: 22pt;
+                font-size: 18pt;
             }
             .title-block p,
             .brand-tagline,
@@ -467,8 +546,8 @@
             td,
             li,
             p {
-                font-size: 8.8pt;
-                line-height: 1.4;
+                font-size: 8.5pt;
+                line-height: 1.35;
             }
             .meta-grid,
             .summary-grid,
@@ -476,6 +555,15 @@
             .metrics,
             .appendix-links {
                 gap: 8px;
+            }
+            .summary-grid {
+                grid-template-columns: minmax(0, 55mm) minmax(0, 1fr);
+            }
+            .metrics {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+            .table-scroll {
+                overflow: visible;
             }
             h2, h3 {
                 break-after: avoid-page;
@@ -489,13 +577,13 @@
                 page-break-inside: avoid;
             }
             th, td {
-                padding: 6px 8px;
+                padding: 5px 6px;
             }
             pre, code {
                 white-space: pre-wrap;
                 word-break: break-word;
                 overflow: visible;
-                font-size: 8pt;
+                font-size: 7.5pt;
             }
             .findings-toolbar,
             .findings-pages,
@@ -546,18 +634,20 @@
 
         <section class="card">
             <h2 class="section-heading">Prioritized Findings</h2>
-            <table>
-                <thead>
-                    <tr><th>Severity</th><th>Issue</th><th>Affected Area</th><th>Business Impact</th><th>Recommendation</th></tr>
-                </thead>
-                <tbody>{{PRIORITY_FINDING_ROWS}}</tbody>
-            </table>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr><th>Severity</th><th>Issue</th><th>Affected Area</th><th>Business Impact</th><th>Recommendation</th></tr>
+                    </thead>
+                    <tbody>{{PRIORITY_FINDING_ROWS}}</tbody>
+                </table>
+            </div>
         </section>
 
         <section class="card">
             <h2 class="section-heading">Coverage &amp; Limitations</h2>
             <div class="coverage-grid">
-                <div>
+                <div class="table-scroll">
                     <table>
                         {{COVERAGE_SUMMARY_ROWS}}
                     </table>
@@ -582,7 +672,7 @@
         <section class="card">
             <h2>Target and Coverage Overview</h2>
             <div class="coverage-grid">
-                <div>
+                <div class="table-scroll">
                     <table>
                         <tr><th>Mode</th><td>{{SCAN_MODE}}</td></tr>
                         <tr><th>Requested Profile</th><td>{{REQUESTED_PROFILE}}</td></tr>
@@ -595,7 +685,7 @@
                         <tr><th>WhatWeb Plugins</th><td>{{FINGERPRINT_WHATWEB}}</td></tr>
                     </table>
                 </div>
-                <div>
+                <div class="table-scroll">
                     <table>
                         <tr><th>Subdomains</th><td>{{DISCOVERY_SUBDOMAINS}}</td></tr>
                         <tr><th>Parameters</th><td>{{DISCOVERY_PARAMETERS}}</td></tr>
@@ -611,10 +701,12 @@
         <section class="card" id="appendix">
             <h2>Appendix: Tool Telemetry</h2>
             <p class="appendix-note">Detailed command telemetry and raw discovery artifacts are included for traceability and manual validation.</p>
-            <table>
-                <thead><tr><th>Tool</th><th>Phase</th><th>Status</th><th>Seconds</th><th>Command</th><th>Outputs</th><th>Notes</th></tr></thead>
-                <tbody>{{TOOLS_ROWS}}</tbody>
-            </table>
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th>Tool</th><th>Phase</th><th>Status</th><th>Seconds</th><th>Command</th><th>Outputs</th><th>Notes</th></tr></thead>
+                    <tbody>{{TOOLS_ROWS}}</tbody>
+                </table>
+            </div>
         </section>
 
         <section class="card">
@@ -653,10 +745,12 @@
                 </select>
                 <span class="findings-count" id="findingsCount"></span>
             </div>
-            <table>
-                <thead><tr><th>#</th><th>Severity</th><th>Exploitability</th><th>Confidence</th><th>Title</th><th>Asset</th><th>Tool</th><th>CVE</th><th>Owner</th><th>Status</th></tr></thead>
-                <tbody id="findingsTableBody">{{FINDING_ROWS}}</tbody>
-            </table>
+            <div class="table-scroll">
+                <table>
+                    <thead><tr><th>#</th><th>Severity</th><th>Exploitability</th><th>Confidence</th><th>Title</th><th>Asset</th><th>Tool</th><th>CVE</th><th>Owner</th><th>Status</th></tr></thead>
+                    <tbody id="findingsTableBody">{{FINDING_ROWS}}</tbody>
+                </table>
+            </div>
             <div class="findings-pages" id="findingsIndexPages"></div>
         </section>
 
