@@ -323,10 +323,10 @@ UPDATE_NUCLEI_TEMPLATES=1 docker compose up -d
 
 Docker tooling notes:
 
-- **httpx**: ProjectDiscovery's Go `httpx` must win over the Python `httpx` CLI that `wapiti3` can install into the venv. The image removes `/opt/venv/bin/httpx` and prefers `/usr/local/bin/httpx`. Use `-websocket` (not `-ws`) with httpx v1.7.x.
+- **httpx**: ProjectDiscovery's Go `httpx` must win over the Python `httpx` CLI. Scanner packages live in `/opt/scanner-venv`; wrappers call those binaries without putting that venv first on `PATH`. Use `-websocket` (not `-ws`) with httpx v1.7.x.
 - **Nikto**: Requires Perl `XML::Writer` (`libxml-writer-perl`) for `-Format json`.
 - **Nuclei**: Templates are baked at image build (`nuclei -ut`). Runtime refresh is off by default (`UPDATE_NUCLEI_TEMPLATES=0`); set to `1` only when needed.
-- **Wapiti**: Pinned to `wapiti3>=3.1.8,<3.2` for Debian/Python 3.11; image build patches any remaining `gettext` `codeset=` usage.
+- **Wapiti / droopescan / sslyze / arjun**: Installed in an isolated `/opt/scanner-venv` so wapiti’s `mitmproxy→Flask<2.3` pin cannot conflict with the Flask 3 app. App deps are in `requirements.txt`; scanner deps are in `requirements-scanners.txt`. Wapiti remains `>=3.1.8,<3.2` on Debian’s Python 3.11 (3.2+ needs Python 3.12+).
 
 Operational reliability knobs in `config/scan-config.json`:
 

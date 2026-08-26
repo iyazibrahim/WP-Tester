@@ -113,16 +113,27 @@ COPY --from=tools /out/nuclei /usr/local/bin/nuclei
 COPY --from=tools /out/feroxbuster /usr/local/bin/feroxbuster
 
 RUN python3 -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel
+    python3 -m venv /opt/scanner-venv && \
+    /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    /opt/scanner-venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel
 
 COPY requirements.txt /tmp/requirements.txt
+COPY requirements-scanners.txt /tmp/requirements-scanners.txt
 
-RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
-    /opt/venv/bin/pip install --no-cache-dir sslyze gunicorn arjun && \
-    # wapiti3 pulls Python httpx, whose CLI would shadow ProjectDiscovery httpx
-    rm -f /opt/venv/bin/httpx && \
+# App venv: Flask 3 / gunicorn only (never install wapiti here).
+RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Scanner venv: wapiti/droopescan/sslyze/arjun — isolated so mitmproxy's Flask pin cannot fight the app.
+RUN /opt/scanner-venv/bin/pip install --no-cache-dir -r /tmp/requirements-scanners.txt && \
+    # Prefer ProjectDiscovery httpx on PATH; scanner venv httpx must not win.
+    rm -f /opt/scanner-venv/bin/httpx /opt/venv/bin/httpx && \
+    printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/wapiti "$@"\n' >/usr/local/bin/wapiti && \
+    printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/droopescan "$@"\n' >/usr/local/bin/droopescan && \
+    printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/sslyze "$@"\n' >/usr/local/bin/sslyze && \
+    printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/arjun "$@"\n' >/usr/local/bin/arjun && \
+    chmod +x /usr/local/bin/wapiti /usr/local/bin/droopescan /usr/local/bin/sslyze /usr/local/bin/arjun && \
     # Python 3.11 removed gettext codeset=; patch older wapiti builds if still present
-    /opt/venv/bin/python - <<'PY'
+    /opt/scanner-venv/bin/python - <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -155,16 +166,16 @@ RUN git clone --depth 1 https://github.com/urbanadventurer/WhatWeb.git /opt/tool
 
 RUN git clone --depth 1 https://github.com/dionach/CMSmap.git /opt/tools/CMSmap && \
     if [ -f /opt/tools/CMSmap/requirements.txt ]; then \
-        /opt/venv/bin/pip install --no-cache-dir -r /opt/tools/CMSmap/requirements.txt; \
+        /opt/scanner-venv/bin/pip install --no-cache-dir -r /opt/tools/CMSmap/requirements.txt; \
     fi && \
-    printf '#!/usr/bin/env bash\nexec python3 /opt/tools/CMSmap/cmsmap.py "$@"\n' >/usr/local/bin/cmsmap && \
+    printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/python /opt/tools/CMSmap/cmsmap.py "$@"\n' >/usr/local/bin/cmsmap && \
     chmod +x /usr/local/bin/cmsmap
 
 RUN git clone --depth 1 https://github.com/s0md3v/Corsy.git /opt/tools/Corsy && \
     if [ -f /opt/tools/Corsy/requirements.txt ]; then \
-        /opt/venv/bin/pip install --no-cache-dir -r /opt/tools/Corsy/requirements.txt; \
+        /opt/scanner-venv/bin/pip install --no-cache-dir -r /opt/tools/Corsy/requirements.txt; \
     fi && \
-    printf '#!/usr/bin/env bash\nexec python3 /opt/tools/Corsy/corsy.py "$@"\n' >/usr/local/bin/corsy && \
+    printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/python /opt/tools/Corsy/corsy.py "$@"\n' >/usr/local/bin/corsy && \
     chmod +x /usr/local/bin/corsy
 
 RUN git clone --depth 1 https://github.com/OWASP/joomscan.git /opt/tools/joomscan && \
@@ -172,7 +183,7 @@ RUN git clone --depth 1 https://github.com/OWASP/joomscan.git /opt/tools/joomsca
     chmod +x /usr/local/bin/joomscan
 
 RUN git clone --depth 1 https://github.com/commixproject/commix.git /opt/tools/commix && \
-    printf '#!/usr/bin/env bash\nexec python3 /opt/tools/commix/commix.py "$@"\n' >/usr/local/bin/commix && \
+    printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/python /opt/tools/commix/commix.py "$@"\n' >/usr/local/bin/commix && \
     chmod +x /usr/local/bin/commix
 
 RUN git clone --depth 1 https://github.com/sullo/nikto.git /opt/tools/nikto && \
@@ -180,7 +191,7 @@ RUN git clone --depth 1 https://github.com/sullo/nikto.git /opt/tools/nikto && \
     chmod +x /usr/local/bin/nikto
 
 # Ensure ProjectDiscovery httpx remains the default after any later pip installs.
-RUN rm -f /opt/venv/bin/httpx
+RUN rm -f /opt/venv/bin/httpx /opt/scanner-venv/bin/httpx
 
 COPY . /app
 

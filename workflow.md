@@ -105,6 +105,13 @@ VPS `docker compose build` failed in the tools stage: dalfox’s tarball contain
 ### Follow-up (2026-08-26): MarkupSafe vs wapiti3
 Pip failed with `MarkupSafe>=3.0.0` vs `wapiti3 3.1.8 → markupsafe==2.1.1`. Pinned `MarkupSafe==2.1.1` in `requirements.txt`.
 
+### Follow-up (2026-08-26): isolate scanner pip deps
+Repeated pip conflicts (`Flask>=3` vs `wapiti→mitmproxy→Flask<2.3`) cannot be solved by pin-tweaking in one venv. Split:
+- `requirements.txt` → `/opt/venv` (Flask 3 app)
+- `requirements-scanners.txt` → `/opt/scanner-venv` (wapiti/droopescan/sslyze/arjun)
+- `/usr/local/bin/{wapiti,droopescan,sslyze,arjun}` wrappers
+Do not reinstall wapiti into the app venv.
+
 ### VPS diagnostics (when Unhealthy again)
 ```bash
 docker inspect dp-security-platform --format "{{json .State.Health}}"
