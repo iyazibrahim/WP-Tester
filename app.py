@@ -14,8 +14,9 @@ from datetime import datetime, timedelta, UTC
 from pathlib import Path
 from collections import defaultdict
 from urllib.parse import urlparse
-from flask import Flask, jsonify, request, send_from_directory, session, redirect
+from flask import Flask, jsonify, request, send_from_directory, session, redirect, Response, abort
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import safe_join
 from lib.assessments import get_catalog, get_workbook, save_workbook, summarize_workbook
 from lib.ai_policy import load_policy, evaluate_plan
 from lib.ai_runner import execute_actions, persist_evidence
@@ -33,6 +34,7 @@ from lib.monitoring import (
     get_monitoring_events,
     summarize_monitoring,
 )
+from lib.reports import apply_report_layout_overrides
 
 # ── Logging setup ───────────────────────────────────────────────────────────────
 
@@ -1576,7 +1578,21 @@ def list_reports():
 @login_required
 def serve_report(filepath):
     as_attach = request.args.get('dl', '0') == '1'
-    return send_from_directory(str(REPORTS_DIR), filepath, as_attachment=as_attach)
+    if as_attach or not str(filepath).lower().endswith('.html'):
+        return send_from_directory(str(REPORTS_DIR), filepath, as_attachment=as_attach)
+
+    safe_path = safe_join(str(REPORTS_DIR), filepath)
+    if not safe_path:
+        abort(404)
+    report_file = Path(safe_path)
+    try:
+        report_file.resolve().relative_to(REPORTS_DIR.resolve())
+    except ValueError:
+        abort(404)
+    if not report_file.is_file():
+        abort(404)
+    html = report_file.read_text(encoding='utf-8', errors='replace')
+    return Response(apply_report_layout_overrides(html), mimetype='text/html; charset=utf-8')
 
 
 @app.route('/api/reports/rename', methods=['PATCH'])

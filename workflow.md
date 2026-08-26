@@ -77,6 +77,30 @@ Then re-run the WordPress scan profile against your target and confirm:
 - [ ] Deploy/rebuild on cloud server
 - [ ] Run manual checklist above
 - [ ] Record any remaining tool anomalies in this file
+- [ ] After deploy, reopen an existing HTML report (Open, not Download) to confirm it is centered and A4 print is readable
+
+## Completed: report centering and A4 print readability (2026-08-26)
+
+### Problem
+On-screen reports were locked to `210mm` (~794px). That made the page look small/off-center, and print CSS set `html, body { width: 210mm }` on top of `@page` margins, so the browser shrunk the whole document to fit A4.
+
+### Fix
+- On-screen report is a centered 960px reading column (`align-items: center`)
+- Print uses A4 with `html/body` width auto (no shrink-to-fit), stacks prioritized findings, hides the 10-column index, and expands paginated findings before print
+- Added **Print / Save as PDF** with A4 / 100% scale guidance
+- Opening an existing saved HTML report injects the same layout/print overrides (download still returns the original file)
+
+### Files touched
+- `templates/report-template.html`
+- `lib/reports.py`
+- `app.py`
+- `tests/test_report_layout.py`
+- `workflow.md`
+
+### Validation
+- `pytest tests/test_report_layout.py tests/test_structured_findings.py tests/test_tool_status.py tests/test_monitoring.py` → 16 passed
+- Browser measure: 1920px viewport, wrap 960px, left offset ~472px (centered)
+- `test_health.py` was not run here (local Python missing Flask)
 
 ## Completed: idle Unhealthy container hardening (2026-08-26)
 

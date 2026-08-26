@@ -6,6 +6,7 @@ import csv
 import html
 import io
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -26,6 +27,108 @@ from lib.standards import SARIF_LEVEL_MAP
 MALAYSIA_TZ = timezone(timedelta(hours=8))
 REPORT_INDEX_FILE = REPORTS_DIR / "report-index.json"
 COMPLETED_TOOL_STATUSES = {"completed", "completed_no_output", "completed_partial"}
+REPORT_LAYOUT_FIX_MARK = "data-report-layout-fix"
+
+_REPORT_LAYOUT_OVERRIDE_CSS = """
+<style data-report-layout-fix>
+html { width: 100% !important; overflow-x: hidden !important; }
+body {
+    width: 100% !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    overflow-x: hidden !important;
+}
+.print-toolbar {
+    width: min(960px, calc(100% - 48px)) !important;
+    max-width: 960px !important;
+    margin: 20px auto 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.print-hint { margin: 0; color: #5f738f; font-size: 0.85rem; line-height: 1.4; flex: 1; min-width: 0; }
+.print-btn {
+    appearance: none;
+    border: 1px solid #14345f;
+    background: #14345f;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.wrap {
+    width: min(960px, calc(100% - 48px)) !important;
+    max-width: 960px !important;
+    margin: 16px auto 40px !important;
+    padding: 36px 40px !important;
+}
+@media print {
+    @page { size: A4 portrait; margin: 12mm; }
+    html, body {
+        width: auto !important;
+        max-width: none !important;
+        min-height: 0 !important;
+        display: block !important;
+        overflow: visible !important;
+        background: #fff !important;
+    }
+    .print-toolbar { display: none !important; }
+    .wrap {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    table, img, svg, pre, code { max-width: 100% !important; }
+    td, th, pre, code { word-break: break-word !important; overflow-wrap: anywhere !important; white-space: pre-wrap !important; }
+    .table-scroll { overflow: visible !important; }
+    .findings-toolbar, .findings-pages, .toc { display: none !important; }
+    .findings-index-card { display: none !important; }
+    #findingsTableBody tr { display: table-row !important; }
+    details.finding { display: block !important; }
+}
+</style>
+""".strip()
+
+
+def apply_report_layout_overrides(html: str) -> str:
+    """Force centered on-screen layout and A4 print rules on saved report HTML."""
+    if not html or REPORT_LAYOUT_FIX_MARK in html or "max-width: 960px" in html:
+        return html
+    updated = html
+    if "</head>" in updated:
+        updated = updated.replace("</head>", _REPORT_LAYOUT_OVERRIDE_CSS + "\n</head>", 1)
+    if "Print / Save as PDF" not in updated and "<body" in updated:
+        toolbar = (
+            '<div class="print-toolbar">'
+            "<p class=\"print-hint\">Use Print → Save as PDF. Choose A4 paper and 100% scale (do not shrink to fit).</p>"
+            '<button type="button" class="print-btn" onclick="window.print()">Print / Save as PDF</button>'
+            "</div>"
+        )
+        updated = re.sub(r"(<body[^>]*>)", r"\1\n" + toolbar, updated, count=1)
+    if "beforeprint" not in updated and "</body>" in updated:
+        updated = updated.replace(
+            "</body>",
+            "<script data-report-layout-fix>"
+            "window.addEventListener('beforeprint',function(){"
+            "document.querySelectorAll('#findingsTableBody tr, #findingsDetailContainer details.finding')"
+            ".forEach(function(n){n.style.display='';});"
+            "document.querySelectorAll('details').forEach(function(d){d.open=true;});"
+            "});"
+            "</script>\n</body>",
+            1,
+        )
+    return updated
 
 
 def _as_malaysia_time(value: datetime) -> datetime:
@@ -1222,9 +1325,12 @@ def generate_html_report(payload: dict) -> str:
             --violet: #8b5cf6;
         }}
         * {{ box-sizing: border-box; }}
-        html {{ overflow-x: hidden; }}
-        body {{ margin: 0; font-family: Segoe UI, Arial, sans-serif; background: radial-gradient(circle at top left, rgba(70,183,255,0.12), transparent 35%), linear-gradient(180deg, #07101d, #101826 28%); color: var(--text); overflow-x: hidden; }}
-        .wrap {{ width: min(210mm, 100%); max-width: 210mm; margin: 24px auto; padding: 14mm 12mm; background: rgba(16,24,38,0.96); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 18px 60px rgba(2, 6, 23, 0.35); min-width: 0; overflow-x: hidden; }}
+        html {{ width: 100%; overflow-x: hidden; }}
+        body {{ margin: 0; width: 100%; min-height: 100vh; display: flex; flex-direction: column; align-items: center; font-family: Segoe UI, Arial, sans-serif; font-size: 16px; background: radial-gradient(circle at top left, rgba(70,183,255,0.12), transparent 35%), linear-gradient(180deg, #07101d, #101826 28%); color: var(--text); overflow-x: hidden; }}
+        .print-toolbar {{ width: min(960px, calc(100% - 48px)); max-width: 960px; margin: 20px auto 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }}
+        .print-hint {{ margin: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.4; flex: 1; min-width: 0; }}
+        .print-btn {{ appearance: none; border: 1px solid var(--accent); background: var(--accent); color: #041018; font-weight: 700; font-size: 0.9rem; padding: 10px 16px; border-radius: 8px; cursor: pointer; white-space: nowrap; }}
+        .wrap {{ width: min(960px, calc(100% - 48px)); max-width: 960px; margin: 16px auto 40px; padding: 36px 40px; background: rgba(16,24,38,0.96); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 18px 60px rgba(2, 6, 23, 0.35); min-width: 0; overflow-x: hidden; }}
         .hero {{ background: linear-gradient(135deg, rgba(16,24,38,0.95), rgba(23,37,84,0.92)); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: none; min-width: 0; overflow: hidden; }}
         .hero h1 {{ margin: 0 0 8px; font-size: 26px; overflow-wrap: anywhere; }}
         .hero p {{ margin: 0; color: var(--muted); }}
@@ -1293,28 +1399,35 @@ def generate_html_report(payload: dict) -> str:
             .actions-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
         }}
         @media (max-width: 720px) {{
-            .wrap {{ margin: 0; border-radius: 0; border-left: none; border-right: none; padding: 16px 12px; }}
+            .print-toolbar, .wrap {{ width: 100%; max-width: none; margin-left: 0; margin-right: 0; }}
+            .wrap {{ margin-top: 12px; margin-bottom: 0; border-radius: 0; border-left: none; border-right: none; padding: 16px 12px; }}
             .meta-grid, .metrics, .risk-banner, .two, .three {{ grid-template-columns: 1fr; }}
         }}
         @media print {{
-            @page {{ size: A4; margin: 11mm; }}
-            html, body {{ width: 210mm; overflow: visible; }}
-            body {{ background: #fff; color: #111827; font-size: 10pt; }}
-            .wrap {{ width: auto; max-width: none; margin: 0; padding: 0; border: none; border-radius: 0; box-shadow: none; background: #fff; overflow: visible; }}
+            @page {{ size: A4 portrait; margin: 12mm; }}
+            html, body {{ width: auto !important; max-width: none !important; min-height: 0 !important; overflow: visible !important; }}
+            body {{ display: block !important; background: #fff !important; color: #111827; font-size: 10.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+            .print-toolbar {{ display: none !important; }}
+            .wrap {{ width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; border: none; border-radius: 0; box-shadow: none; background: #fff; overflow: visible; }}
             .grid {{ gap: 10px; }}
-            .card, .metric-card, .hero, .risk-chip, details.finding {{ box-shadow: none; break-inside: avoid-page; page-break-inside: avoid; }}
+            .card, .metric-card, .hero, .risk-chip {{ box-shadow: none; }}
+            details.finding {{ box-shadow: none; break-inside: auto; display: block !important; }}
             .card, .metric-card {{ padding: 12px; border-radius: 10px; }}
             .hero {{ padding: 18px; border-radius: 12px; }}
             h1 {{ font-size: 18pt; }}
             h2, h3 {{ break-after: avoid-page; page-break-after: avoid; }}
-            th, td, p, li, .meta, .appendix-note, .legend {{ font-size: 8.5pt; line-height: 1.35; }}
-            th, td {{ padding: 5px 6px; }}
+            th, td, p, li, .meta, .appendix-note, .legend {{ font-size: 9pt; line-height: 1.4; }}
+            th, td {{ padding: 5px 6px; word-break: break-word; overflow-wrap: anywhere; }}
             thead {{ display: table-header-group; }}
             tr {{ break-inside: avoid-page; page-break-inside: avoid; }}
-            pre, code {{ white-space: pre-wrap; word-break: break-word; overflow: visible; font-size: 7.5pt; }}
-            .table-scroll {{ overflow: visible; }}
+            pre, code {{ white-space: pre-wrap; word-break: break-word; overflow: visible; font-size: 8pt; }}
+            .table-scroll {{ overflow: visible !important; }}
             .toc, .findings-toolbar, .findings-pages {{ display: none !important; }}
+            .findings-index-card {{ display: none !important; }}
+            table.priority-table tr {{ break-inside: avoid; }}
             details.finding > summary .sum-chevron {{ display: none; }}
+            details.finding > *:not(summary) {{ display: block !important; }}
+            #findingsTableBody tr {{ display: table-row !important; }}
         }}
         /* ── Text overflow fixes ─────────────────────────────────────────── */
         td, th {{ word-break: break-word; overflow-wrap: anywhere; }}
@@ -1368,6 +1481,10 @@ def generate_html_report(payload: dict) -> str:
     </style>
 </head>
 <body>
+    <div class="print-toolbar">
+        <p class="print-hint">Use Print → Save as PDF. Choose A4 paper and 100% scale (do not shrink to fit).</p>
+        <button type="button" class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+    </div>
     <div class="wrap">
         <nav class="toc">
             <a href="#executive-summary">Executive Summary</a>
@@ -1515,7 +1632,7 @@ def generate_html_report(payload: dict) -> str:
         {manual_sections_html}
 
         <h2 id="findings-index">Findings Index</h2>
-        <div class="card">
+        <div class="card findings-index-card">
             <div class="findings-toolbar">
                 <input id="findingsSearch" type="search" placeholder="Search findings by title, tool, CVE&hellip;">
                 <select id="findingsSevFilter">
@@ -1711,6 +1828,19 @@ def generate_html_report(payload: dict) -> str:
 
     buildDetailPages();
     renderDetailPage();
+
+    window.addEventListener('beforeprint', function() {{
+        allRows.forEach(function(r) {{ r.style.display = ''; }});
+        allCards.forEach(function(c) {{
+            c.style.display = '';
+            c.open = true;
+        }});
+        document.querySelectorAll('details').forEach(function(d) {{ d.open = true; }});
+    }});
+    window.addEventListener('afterprint', function() {{
+        renderPage();
+        renderDetailPage();
+    }});
 }})();
 </script>
 </html>"""

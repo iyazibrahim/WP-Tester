@@ -25,21 +25,58 @@
         }
         * { box-sizing: border-box; }
         html {
+            width: 100%;
             overflow-x: hidden;
         }
         body {
             margin: 0;
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             font-family: "Segoe UI", Arial, sans-serif;
+            font-size: 16px;
             background: linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
             color: var(--text);
             overflow-x: hidden;
         }
-        /* On-screen A4 page preview (~210mm). Shrinks on narrow viewports. */
+        .print-toolbar {
+            width: min(960px, calc(100% - 48px));
+            max-width: 960px;
+            margin: 20px auto 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .print-hint {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.85rem;
+            line-height: 1.4;
+            flex: 1;
+            min-width: 0;
+        }
+        .print-btn {
+            appearance: none;
+            border: 1px solid var(--navy);
+            background: var(--navy);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .print-btn:hover { background: #0f2a4d; }
         .wrap {
-            width: min(210mm, 100%);
-            max-width: 210mm;
-            margin: 24px auto;
-            padding: 14mm 12mm;
+            width: min(960px, calc(100% - 48px));
+            max-width: 960px;
+            margin: 16px auto 40px;
+            padding: 36px 40px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 4px;
@@ -454,12 +491,23 @@
         }
         /* Stack denser layouts for narrow phones / when A4 page is constrained */
         @media (max-width: 720px) {
+            .print-toolbar,
             .wrap {
-                margin: 0;
+                width: 100%;
+                max-width: none;
+                margin-left: 0;
+                margin-right: 0;
+            }
+            .wrap {
+                margin-top: 12px;
+                margin-bottom: 0;
                 border-radius: 0;
                 border-left: none;
                 border-right: none;
                 padding: 16px 12px;
+            }
+            .print-toolbar {
+                padding: 0 12px;
             }
             .summary-grid,
             .meta-grid,
@@ -476,6 +524,9 @@
             }
         }
         @media (min-width: 721px) {
+            .meta-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
             .metrics {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
@@ -488,112 +539,164 @@
         }
         @media print {
             @page {
-                size: A4;
-                margin: 11mm;
+                size: A4 portrait;
+                margin: 12mm;
             }
             html, body {
-                width: 210mm;
-                overflow: visible;
+                width: auto !important;
+                max-width: none !important;
+                min-height: 0 !important;
+                overflow: visible !important;
             }
             body {
-                background: #fff;
+                display: block !important;
+                align-items: stretch;
+                background: #fff !important;
                 color: #111827;
-                font-size: 10pt;
+                font-size: 10.5pt;
+                line-height: 1.4;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .print-toolbar {
+                display: none !important;
             }
             .wrap {
-                width: auto;
-                max-width: none;
-                margin: 0;
-                padding: 0;
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 border: none;
                 border-radius: 0;
                 box-shadow: none;
                 background: #fff;
                 overflow: visible;
             }
-            .report-shell {
-                gap: 10px;
-            }
-            .card,
-            .brand-header,
-            .risk-card,
-            .summary-text,
-            .metric-card,
-            .appendix-link,
-            details.finding {
-                box-shadow: none;
-                break-inside: avoid-page;
-                page-break-inside: avoid;
+            .report-shell { gap: 8px; }
+            img, svg, table, pre, code {
+                max-width: 100% !important;
             }
             .card,
             .metric-card {
-                border-radius: 8px;
-                padding: 10px;
+                box-shadow: none;
+                border-radius: 6px;
+                padding: 8px 10px;
                 background: #fff;
             }
-            .brand-bar {
-                padding-bottom: 8px;
-            }
-            .title-block h1 {
-                font-size: 18pt;
-            }
+            .brand-bar { padding-bottom: 6px; }
+            .title-block h1 { font-size: 18pt; }
             .title-block p,
             .brand-tagline,
             .summary-prose,
             .coverage-note,
             .appendix-note,
-            th,
-            td,
             li,
             p {
-                font-size: 8.5pt;
-                line-height: 1.35;
+                font-size: 10pt;
+                line-height: 1.4;
             }
             .meta-grid,
             .summary-grid,
             .coverage-grid,
             .metrics,
             .appendix-links {
-                gap: 8px;
+                gap: 6px;
             }
-            .summary-grid {
-                grid-template-columns: minmax(0, 55mm) minmax(0, 1fr);
-            }
+            .meta-grid,
             .metrics {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
+            .summary-grid {
+                grid-template-columns: minmax(0, 42mm) minmax(0, 1fr);
+            }
             .table-scroll {
-                overflow: visible;
+                overflow: visible !important;
+                width: 100%;
             }
             h2, h3 {
                 break-after: avoid-page;
                 page-break-after: avoid;
             }
-            thead {
-                display: table-header-group;
-            }
-            tr {
-                break-inside: avoid-page;
-                page-break-inside: avoid;
-            }
+            thead { display: table-header-group; }
+            tr { break-inside: avoid; page-break-inside: avoid; }
             th, td {
-                padding: 5px 6px;
+                padding: 4px 5px;
+                font-size: 9pt;
+                word-break: break-word;
+                overflow-wrap: anywhere;
             }
             pre, code {
                 white-space: pre-wrap;
                 word-break: break-word;
                 overflow: visible;
-                font-size: 7.5pt;
+                font-size: 8pt;
             }
             .findings-toolbar,
             .findings-pages,
             .toc {
                 display: none !important;
             }
+            .findings-index-card {
+                display: none !important;
+            }
+            table.priority-table,
+            table.priority-table tbody {
+                display: block;
+                width: 100%;
+            }
+            table.priority-table thead { display: none; }
+            table.priority-table tr {
+                display: block;
+                border: 1px solid #d9e3ee;
+                border-radius: 6px;
+                padding: 8px 10px;
+                margin: 0 0 8px;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            table.priority-table td {
+                display: block;
+                padding: 3px 0;
+                border: 0;
+                font-size: 10pt;
+            }
+            table.priority-table td::before {
+                display: block;
+                font-size: 7.5pt;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: #5f738f;
+                margin-bottom: 1px;
+            }
+            table.priority-table td:nth-child(1)::before { content: "Severity"; }
+            table.priority-table td:nth-child(2)::before { content: "Issue"; }
+            table.priority-table td:nth-child(3)::before { content: "Affected Area"; }
+            table.priority-table td:nth-child(4)::before { content: "Business Impact"; }
+            table.priority-table td:nth-child(5)::before { content: "Recommendation"; }
+            .tools-table th:nth-child(n+5),
+            .tools-table td:nth-child(n+5) {
+                display: none;
+            }
+            details.finding {
+                break-inside: auto;
+                display: block !important;
+            }
+            details.finding > summary {
+                break-after: avoid;
+            }
+            details.finding > *:not(summary) {
+                display: block !important;
+            }
+            #findingsTableBody tr { display: table-row !important; }
         }
     </style>
 </head>
 <body>
+<div class="print-toolbar">
+    <p class="print-hint">Use Print → Save as PDF. Choose A4 paper and 100% scale (do not shrink to fit).</p>
+    <button type="button" class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</div>
 <div class="wrap">
     <div class="report-shell">
         <section class="card brand-header">
@@ -635,7 +738,7 @@
         <section class="card">
             <h2 class="section-heading">Prioritized Findings</h2>
             <div class="table-scroll">
-                <table>
+                <table class="priority-table">
                     <thead>
                         <tr><th>Severity</th><th>Issue</th><th>Affected Area</th><th>Business Impact</th><th>Recommendation</th></tr>
                     </thead>
@@ -702,7 +805,7 @@
             <h2>Appendix: Tool Telemetry</h2>
             <p class="appendix-note">Detailed command telemetry and raw discovery artifacts are included for traceability and manual validation.</p>
             <div class="table-scroll">
-                <table>
+                <table class="tools-table">
                     <thead><tr><th>Tool</th><th>Phase</th><th>Status</th><th>Seconds</th><th>Command</th><th>Outputs</th><th>Notes</th></tr></thead>
                     <tbody>{{TOOLS_ROWS}}</tbody>
                 </table>
@@ -716,7 +819,7 @@
 
         {{MANUAL_ASSESSMENT_SECTIONS}}
 
-        <section class="card">
+        <section class="card findings-index-card">
             <h2 id="findings-index">Findings Index</h2>
             <div class="findings-toolbar">
                 <input id="findingsSearch" type="search" placeholder="Search findings by title, tool, CVE...">
@@ -881,6 +984,19 @@
 
     buildDetailPages();
     renderDetailPage();
+
+    window.addEventListener('beforeprint', function() {
+        allRows.forEach(function(r) { r.style.display = ''; });
+        allCards.forEach(function(c) {
+            c.style.display = '';
+            c.open = true;
+        });
+        document.querySelectorAll('details').forEach(function(d) { d.open = true; });
+    });
+    window.addEventListener('afterprint', function() {
+        renderPage();
+        renderDetailPage();
+    });
 })();
 </script>
 </body>
