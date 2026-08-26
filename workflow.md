@@ -99,6 +99,9 @@ On a 2 GB VPS the container could stay **Up** with status **Unhealthy** after 1â
 - `pytest tests/` (local)
 - Manual on VPS after rebuild: container stays healthy idle; `/health` returns 200; prune old images/builders if disk is tight
 
+### Follow-up (2026-08-26): dalfox release archive name
+VPS `docker compose build` failed in the tools stage: dalfoxâ€™s tarball contains `dalfox-linux-amd64`, not `dalfox`. Dockerfile now installs that member and defaults `TARGETARCH=amd64`.
+
 ### VPS diagnostics (when Unhealthy again)
 ```bash
 docker inspect dp-security-platform --format "{{json .State.Health}}"

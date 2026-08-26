@@ -1,7 +1,8 @@
 # Download pinned release binaries instead of compiling Go/Rust on the VPS.
 FROM debian:12-slim AS tools
 
-ARG TARGETARCH
+# Default amd64 when BuildKit does not inject TARGETARCH (classic docker build).
+ARG TARGETARCH=amd64
 ARG HTTPX_VERSION=v1.7.1
 ARG SUBFINDER_VERSION=v2.7.0
 ARG FFUF_VERSION=v2.1.0
@@ -22,7 +23,7 @@ WORKDIR /tmp/tools
 
 RUN set -eux; \
     case "${TARGETARCH}" in \
-      amd64) PD_ARCH=amd64; FEROX_ARCH=x86_64 ;; \
+      amd64|"") PD_ARCH=amd64; FEROX_ARCH=x86_64 ;; \
       arm64) PD_ARCH=arm64; FEROX_ARCH=aarch64 ;; \
       *) echo "Unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
@@ -34,27 +35,38 @@ RUN set -eux; \
     GAU_VER="$(strip_v "${GAU_VERSION}")"; \
     NUCLEI_VER="$(strip_v "${NUCLEI_VERSION}")"; \
     mkdir -p /out; \
+    echo "[tools] arch=${PD_ARCH} ferox=${FEROX_ARCH}"; \
+    echo "[tools] httpx"; \
     curl -fsSL -o httpx.zip \
       "https://github.com/projectdiscovery/httpx/releases/download/${HTTPX_VERSION}/httpx_${HTTPX_VER}_linux_${PD_ARCH}.zip"; \
     unzip -qo httpx.zip httpx && install -m 0755 httpx /out/httpx; \
+    echo "[tools] subfinder"; \
     curl -fsSL -o subfinder.zip \
       "https://github.com/projectdiscovery/subfinder/releases/download/${SUBFINDER_VERSION}/subfinder_${SUBFINDER_VER}_linux_${PD_ARCH}.zip"; \
     unzip -qo subfinder.zip subfinder && install -m 0755 subfinder /out/subfinder; \
+    echo "[tools] ffuf"; \
     curl -fsSL -o ffuf.tgz \
       "https://github.com/ffuf/ffuf/releases/download/${FFUF_VERSION}/ffuf_${FFUF_VER}_linux_${PD_ARCH}.tar.gz"; \
     tar -xzf ffuf.tgz ffuf && install -m 0755 ffuf /out/ffuf; \
+    echo "[tools] dalfox"; \
     curl -fsSL -o dalfox.tgz \
       "https://github.com/hahwul/dalfox/releases/download/${DALFOX_VERSION}/dalfox-linux-${PD_ARCH}.tar.gz"; \
-    tar -xzf dalfox.tgz && install -m 0755 dalfox /out/dalfox; \
+    # Release tarball member is dalfox-linux-<arch>, not plain "dalfox".
+    tar -xzf dalfox.tgz "dalfox-linux-${PD_ARCH}" && \
+      install -m 0755 "dalfox-linux-${PD_ARCH}" /out/dalfox; \
+    echo "[tools] katana"; \
     curl -fsSL -o katana.zip \
       "https://github.com/projectdiscovery/katana/releases/download/${KATANA_VERSION}/katana_${KATANA_VER}_linux_${PD_ARCH}.zip"; \
     unzip -qo katana.zip katana && install -m 0755 katana /out/katana; \
+    echo "[tools] gau"; \
     curl -fsSL -o gau.tgz \
       "https://github.com/lc/gau/releases/download/${GAU_VERSION}/gau_${GAU_VER}_linux_${PD_ARCH}.tar.gz"; \
     tar -xzf gau.tgz gau && install -m 0755 gau /out/gau; \
+    echo "[tools] nuclei"; \
     curl -fsSL -o nuclei.zip \
       "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${NUCLEI_VER}_linux_${PD_ARCH}.zip"; \
     unzip -qo nuclei.zip nuclei && install -m 0755 nuclei /out/nuclei; \
+    echo "[tools] feroxbuster"; \
     curl -fsSL -o ferox.zip \
       "https://github.com/epi052/feroxbuster/releases/download/${FEROXBUSTER_VERSION}/${FEROX_ARCH}-linux-feroxbuster.zip"; \
     unzip -qo ferox.zip feroxbuster && install -m 0755 feroxbuster /out/feroxbuster; \
