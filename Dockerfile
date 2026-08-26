@@ -119,46 +119,28 @@ RUN python3 -m venv /opt/venv && \
 
 COPY requirements.txt /tmp/requirements.txt
 COPY requirements-scanners.txt /tmp/requirements-scanners.txt
+COPY docker/patch_wapiti_gettext.py /tmp/patch_wapiti_gettext.py
 
 # App venv: Flask 3 / gunicorn only (never install wapiti here).
 RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
 
-# Scanner venv: wapiti/droopescan/sslyze/arjun — isolated so mitmproxy's Flask pin cannot fight the app.
-RUN /opt/scanner-venv/bin/pip install --no-cache-dir -r /tmp/requirements-scanners.txt && \
-    # Prefer ProjectDiscovery httpx on PATH; scanner venv httpx must not win.
+# Native build toolchain for scanner wheels (zstandard/mitmproxy) and WPScan gem, then purge.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential python3-dev && \
+    /opt/scanner-venv/bin/pip install --no-cache-dir -r /tmp/requirements-scanners.txt && \
     rm -f /opt/scanner-venv/bin/httpx /opt/venv/bin/httpx && \
     printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/wapiti "$@"\n' >/usr/local/bin/wapiti && \
     printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/droopescan "$@"\n' >/usr/local/bin/droopescan && \
     printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/sslyze "$@"\n' >/usr/local/bin/sslyze && \
     printf '#!/usr/bin/env bash\nexec /opt/scanner-venv/bin/arjun "$@"\n' >/usr/local/bin/arjun && \
     chmod +x /usr/local/bin/wapiti /usr/local/bin/droopescan /usr/local/bin/sslyze /usr/local/bin/arjun && \
-    # Python 3.11 removed gettext codeset=; patch older wapiti builds if still present
-    /opt/scanner-venv/bin/python - <<'PY'
-from pathlib import Path
-import re
-import sys
-root = Path(sys.prefix) / "lib"
-patched = 0
-for path in root.rglob("wapitiCore/language/language.py"):
-    text = path.read_text(encoding="utf-8")
-    if "codeset" not in text:
-        continue
-    updated = re.sub(r",\s*codeset\s*=\s*[^,\)]+", "", text)
-    if updated != text:
-        path.write_text(updated, encoding="utf-8")
-        patched += 1
-        print(f"patched {path}")
-print(f"wapiti gettext patches applied: {patched}")
-PY
+    /opt/scanner-venv/bin/python /tmp/patch_wapiti_gettext.py && \
+    gem install --no-document wpscan && \
+    apt-get purge -y --auto-remove build-essential python3-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # Bake Nuclei templates into the image (requires network at build time).
 RUN nuclei -ut || nuclei -update-templates || true
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential && \
-    gem install --no-document wpscan && \
-    apt-get purge -y --auto-remove build-essential && \
-    rm -rf /var/lib/apt/lists/*
 
 RUN git clone --depth 1 https://github.com/urbanadventurer/WhatWeb.git /opt/tools/whatweb && \
     printf '#!/usr/bin/env bash\nexec ruby /opt/tools/whatweb/whatweb "$@"\n' >/usr/local/bin/whatweb && \

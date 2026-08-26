@@ -112,6 +112,9 @@ Repeated pip conflicts (`Flask>=3` vs `wapiti→mitmproxy→Flask<2.3`) cannot b
 - `/usr/local/bin/{wapiti,droopescan,sslyze,arjun}` wrappers
 Do not reinstall wapiti into the app venv.
 
+### Follow-up (2026-08-26): zstandard needs gcc
+Scanner pip failed building `zstandard` (`No such file or directory: x86_64-linux-gnu-gcc`). Install `build-essential` + `python3-dev` before scanner/WPScan installs, then purge them.
+
 ### VPS diagnostics (when Unhealthy again)
 ```bash
 docker inspect dp-security-platform --format "{{json .State.Health}}"
