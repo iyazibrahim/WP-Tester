@@ -102,6 +102,9 @@ On a 2 GB VPS the container could stay **Up** with status **Unhealthy** after 1�
 ### Follow-up (2026-08-26): dalfox release archive name
 VPS `docker compose build` failed in the tools stage: dalfox’s tarball contains `dalfox-linux-amd64`, not `dalfox`. Dockerfile now installs that member and defaults `TARGETARCH=amd64`.
 
+### Follow-up (2026-08-26): MarkupSafe vs wapiti3
+Pip failed with `MarkupSafe>=3.0.0` vs `wapiti3 3.1.8 → markupsafe==2.1.1`. Pinned `MarkupSafe==2.1.1` in `requirements.txt`.
+
 ### VPS diagnostics (when Unhealthy again)
 ```bash
 docker inspect dp-security-platform --format "{{json .State.Health}}"
