@@ -78,6 +78,35 @@ Then re-run the WordPress scan profile against your target and confirm:
 - [ ] Run manual checklist above
 - [ ] Record any remaining tool anomalies in this file
 
+## Completed: idle Unhealthy container hardening (2026-08-26)
+
+### Problem
+On a 2 GB VPS the container could stay **Up** with status **Unhealthy** after 1–2 weeks idle, and the website stopped loading. Docker only restarts on process exit, so a hung/dead gunicorn worker left the master alive while HTTP (including `/health`) failed.
+
+### Fixes
+- Gunicorn: `gthread` worker, 120s timeout, `--max-requests` recycling, skip `/health` in access logs
+- Healthcheck: IPv4 `127.0.0.1` via `docker/healthcheck.sh`; 60s interval / 15s timeout / 60s start_period / 5 retries
+- Compose: `mem_limit: 1536m`, JSON log rotation, default `UPDATE_NUCLEI_TEMPLATES=0`
+- Dockerfile: download pinned GitHub release binaries instead of `go install` / `cargo install`
+- `.dockerignore` tightened to shrink build context
+
+### Files touched
+- `docker/entrypoint.sh`, `docker/gunicorn_logging.py`, `docker/healthcheck.sh`, `docker/__init__.py`
+- `Dockerfile`, `docker-compose.yml`, `.dockerignore`
+- `tests/test_health.py`, `README.md`, `workflow.md`
+
+### Validation
+- `pytest tests/` (local)
+- Manual on VPS after rebuild: container stays healthy idle; `/health` returns 200; prune old images/builders if disk is tight
+
+### VPS diagnostics (when Unhealthy again)
+```bash
+docker inspect dp-security-platform --format "{{json .State.Health}}"
+docker compose logs --tail 200
+free -h && df -h
+dmesg -T | grep -iE "oom|killed process" | tail
+```
+
 ## Completed: A4 report layout fix (2026-08-07)
 
 ### Problem

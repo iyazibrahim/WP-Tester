@@ -1,5 +1,7 @@
-FROM golang:1.25-bookworm AS gobuilder
+# Download pinned release binaries instead of compiling Go/Rust on the VPS.
+FROM debian:12-slim AS tools
 
+ARG TARGETARCH
 ARG HTTPX_VERSION=v1.7.1
 ARG SUBFINDER_VERSION=v2.7.0
 ARG FFUF_VERSION=v2.1.0
@@ -7,21 +9,56 @@ ARG DALFOX_VERSION=v2.12.0
 ARG KATANA_VERSION=v1.1.2
 ARG GAU_VERSION=v2.2.4
 ARG NUCLEI_VERSION=v3.3.8
+ARG FEROXBUSTER_VERSION=v2.11.0
 
-ENV GOBIN=/go/bin
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    unzip \
+    tar \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN CGO_ENABLED=0 go install -v github.com/projectdiscovery/httpx/cmd/httpx@${HTTPX_VERSION}
-RUN CGO_ENABLED=0 go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@${SUBFINDER_VERSION}
-RUN CGO_ENABLED=0 go install -v github.com/ffuf/ffuf/v2@${FFUF_VERSION}
-RUN CGO_ENABLED=0 go install -v github.com/hahwul/dalfox/v2@${DALFOX_VERSION}
-# Katana's Linux build pulls in go-tree-sitter, which does not build with CGO disabled.
-RUN CGO_ENABLED=1 go install -v github.com/projectdiscovery/katana/cmd/katana@${KATANA_VERSION}
-RUN CGO_ENABLED=0 go install -v github.com/lc/gau/v2/cmd/gau@${GAU_VERSION}
-RUN CGO_ENABLED=0 go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@${NUCLEI_VERSION}
+WORKDIR /tmp/tools
 
-FROM rust:1.89-bookworm AS rustbuilder
-
-RUN cargo install --locked feroxbuster
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+      amd64) PD_ARCH=amd64; FEROX_ARCH=x86_64 ;; \
+      arm64) PD_ARCH=arm64; FEROX_ARCH=aarch64 ;; \
+      *) echo "Unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    strip_v() { printf '%s' "$1" | sed 's/^v//'; }; \
+    HTTPX_VER="$(strip_v "${HTTPX_VERSION}")"; \
+    SUBFINDER_VER="$(strip_v "${SUBFINDER_VERSION}")"; \
+    FFUF_VER="$(strip_v "${FFUF_VERSION}")"; \
+    KATANA_VER="$(strip_v "${KATANA_VERSION}")"; \
+    GAU_VER="$(strip_v "${GAU_VERSION}")"; \
+    NUCLEI_VER="$(strip_v "${NUCLEI_VERSION}")"; \
+    mkdir -p /out; \
+    curl -fsSL -o httpx.zip \
+      "https://github.com/projectdiscovery/httpx/releases/download/${HTTPX_VERSION}/httpx_${HTTPX_VER}_linux_${PD_ARCH}.zip"; \
+    unzip -qo httpx.zip httpx && install -m 0755 httpx /out/httpx; \
+    curl -fsSL -o subfinder.zip \
+      "https://github.com/projectdiscovery/subfinder/releases/download/${SUBFINDER_VERSION}/subfinder_${SUBFINDER_VER}_linux_${PD_ARCH}.zip"; \
+    unzip -qo subfinder.zip subfinder && install -m 0755 subfinder /out/subfinder; \
+    curl -fsSL -o ffuf.tgz \
+      "https://github.com/ffuf/ffuf/releases/download/${FFUF_VERSION}/ffuf_${FFUF_VER}_linux_${PD_ARCH}.tar.gz"; \
+    tar -xzf ffuf.tgz ffuf && install -m 0755 ffuf /out/ffuf; \
+    curl -fsSL -o dalfox.tgz \
+      "https://github.com/hahwul/dalfox/releases/download/${DALFOX_VERSION}/dalfox-linux-${PD_ARCH}.tar.gz"; \
+    tar -xzf dalfox.tgz && install -m 0755 dalfox /out/dalfox; \
+    curl -fsSL -o katana.zip \
+      "https://github.com/projectdiscovery/katana/releases/download/${KATANA_VERSION}/katana_${KATANA_VER}_linux_${PD_ARCH}.zip"; \
+    unzip -qo katana.zip katana && install -m 0755 katana /out/katana; \
+    curl -fsSL -o gau.tgz \
+      "https://github.com/lc/gau/releases/download/${GAU_VERSION}/gau_${GAU_VER}_linux_${PD_ARCH}.tar.gz"; \
+    tar -xzf gau.tgz gau && install -m 0755 gau /out/gau; \
+    curl -fsSL -o nuclei.zip \
+      "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${NUCLEI_VER}_linux_${PD_ARCH}.zip"; \
+    unzip -qo nuclei.zip nuclei && install -m 0755 nuclei /out/nuclei; \
+    curl -fsSL -o ferox.zip \
+      "https://github.com/epi052/feroxbuster/releases/download/${FEROXBUSTER_VERSION}/${FEROX_ARCH}-linux-feroxbuster.zip"; \
+    unzip -qo ferox.zip feroxbuster && install -m 0755 feroxbuster /out/feroxbuster; \
+    ls -la /out
 
 FROM debian:12-slim AS runtime
 
@@ -54,14 +91,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlmap \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=gobuilder /go/bin/httpx /usr/local/bin/httpx
-COPY --from=gobuilder /go/bin/subfinder /usr/local/bin/subfinder
-COPY --from=gobuilder /go/bin/ffuf /usr/local/bin/ffuf
-COPY --from=gobuilder /go/bin/dalfox /usr/local/bin/dalfox
-COPY --from=gobuilder /go/bin/katana /usr/local/bin/katana
-COPY --from=gobuilder /go/bin/gau /usr/local/bin/gau
-COPY --from=gobuilder /go/bin/nuclei /usr/local/bin/nuclei
-COPY --from=rustbuilder /usr/local/cargo/bin/feroxbuster /usr/local/bin/feroxbuster
+COPY --from=tools /out/httpx /usr/local/bin/httpx
+COPY --from=tools /out/subfinder /usr/local/bin/subfinder
+COPY --from=tools /out/ffuf /usr/local/bin/ffuf
+COPY --from=tools /out/dalfox /usr/local/bin/dalfox
+COPY --from=tools /out/katana /usr/local/bin/katana
+COPY --from=tools /out/gau /usr/local/bin/gau
+COPY --from=tools /out/nuclei /usr/local/bin/nuclei
+COPY --from=tools /out/feroxbuster /usr/local/bin/feroxbuster
 
 RUN python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel
@@ -135,14 +172,14 @@ RUN rm -f /opt/venv/bin/httpx
 
 COPY . /app
 
-RUN chmod +x /app/docker/entrypoint.sh && \
+RUN chmod +x /app/docker/entrypoint.sh /app/docker/healthcheck.sh && \
     find /app -maxdepth 1 -name "*.sh" -exec sed -i 's/\r$//' {} \; && \
-    sed -i 's/\r$//' /app/docker/entrypoint.sh
+    sed -i 's/\r$//' /app/docker/entrypoint.sh /app/docker/healthcheck.sh
 
 EXPOSE 5000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-    CMD curl -f http://localhost:5000/health || exit 1
+HEALTHCHECK --interval=60s --timeout=15s --start-period=60s --retries=5 \
+    CMD ["/app/docker/healthcheck.sh"]
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["app"]

@@ -8,7 +8,8 @@ services:
     ports:
       - "5000:5000"
     environment:
-      UPDATE_NUCLEI_TEMPLATES: "1"
+      # Templates are baked at image build; set to "1" only when you need a refresh.
+      UPDATE_NUCLEI_TEMPLATES: "0"
       PYTHONUNBUFFERED: "1"
       # Set a strong secret key in production — if unset, a random key is
       # generated per-process which invalidates sessions on restart.
@@ -18,9 +19,16 @@ services:
       - ./reports:/app/reports
       - ./logs:/app/logs
     restart: unless-stopped
+    # Leave ~512MB for the host OS/Docker on a 2GB VPS.
+    mem_limit: 1536m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
-      start_period: 20s
-      retries: 3
+      test: ["CMD", "/app/docker/healthcheck.sh"]
+      interval: 60s
+      timeout: 15s
+      start_period: 60s
+      retries: 5

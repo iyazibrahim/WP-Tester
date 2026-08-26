@@ -289,19 +289,43 @@ docker compose up -d --build
 docker compose run --rm dp-security-platform scanner --target https://example.com --mode full --profile auto --ci
 ```
 
+### 2 GB VPS notes
+
+The compose file caps the container at `1536m` RAM, rotates Docker JSON logs (`10m` × 3), and probes health via `http://127.0.0.1:5000/health` every 60s. Gunicorn runs one `gthread` worker with `--max-requests` recycling so a dead worker cannot leave the container **Up** but Unhealthy for weeks.
+
+Scanner CLIs are downloaded as pinned GitHub release binaries (not compiled with Go/Rust on the VPS), which keeps rebuilds much lighter on small hosts.
+
+Free disk after rebuilds:
+
+```bash
+docker image prune -f
+docker builder prune -f
+df -h
+```
+
+If the site stops responding while `docker ps` still shows the container:
+
+```bash
+docker inspect dp-security-platform --format "{{json .State.Health}}"
+docker compose logs --tail 200 dp-security-platform
+free -h
+df -h
+dmesg -T | grep -iE "oom|killed process" | tail
+```
+
 Optional startup behavior:
 
 ```bash
-# Nuclei templates refresh on startup (default in docker-compose.yml)
-# Set to 0 only if you want to skip the update for faster restarts
-UPDATE_NUCLEI_TEMPLATES=0 docker compose up -d
+# Nuclei templates are baked at image build and skipped on start by default.
+# Set to 1 only when you intentionally want a runtime template refresh
+UPDATE_NUCLEI_TEMPLATES=1 docker compose up -d
 ```
 
 Docker tooling notes:
 
 - **httpx**: ProjectDiscovery's Go `httpx` must win over the Python `httpx` CLI that `wapiti3` can install into the venv. The image removes `/opt/venv/bin/httpx` and prefers `/usr/local/bin/httpx`. Use `-websocket` (not `-ws`) with httpx v1.7.x.
 - **Nikto**: Requires Perl `XML::Writer` (`libxml-writer-perl`) for `-Format json`.
-- **Nuclei**: Templates are baked at image build (`nuclei -ut`) and refreshed when `UPDATE_NUCLEI_TEMPLATES=1`.
+- **Nuclei**: Templates are baked at image build (`nuclei -ut`). Runtime refresh is off by default (`UPDATE_NUCLEI_TEMPLATES=0`); set to `1` only when needed.
 - **Wapiti**: Pinned to `wapiti3>=3.1.8,<3.2` for Debian/Python 3.11; image build patches any remaining `gettext` `codeset=` usage.
 
 Operational reliability knobs in `config/scan-config.json`:

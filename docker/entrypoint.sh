@@ -16,11 +16,15 @@ if [[ $# -eq 0 || "$1" == "app" ]]; then
         exec gunicorn \
             --workers 1 \
             --threads 4 \
-            --worker-class sync \
+            --worker-class gthread \
             --bind 0.0.0.0:5000 \
-            --timeout 600 \
+            --timeout 120 \
+            --graceful-timeout 30 \
             --keep-alive 5 \
+            --max-requests 200 \
+            --max-requests-jitter 50 \
             --log-level info \
+            --logger-class docker.gunicorn_logging.Logger \
             --access-logfile logs/access.log \
             --error-logfile logs/error.log \
             app:app "$@"
